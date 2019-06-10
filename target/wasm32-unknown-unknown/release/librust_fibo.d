@@ -1,0 +1,1 @@
+/Users/freddiepike/school/cs4780/example_apps/chapter3_walkthrough/target/wasm32-unknown-unknown/release/librust_fibo.rlib: /Users/freddiepike/school/cs4780/example_apps/chapter3_walkthrough/src/lib.rs

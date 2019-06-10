@@ -1,0 +1,10 @@
+[package]
+name = "rust_fibo"
+version = "0.1.0"
+authors = ["Freddie Pike <Freddie@colabsoftware.com>"]
+edition = "2018"
+
+[dependencies]
+
+[lib]
+crate-type =["cdylib"]
