@@ -8,9 +8,9 @@ baboon.onload = function () {
   ctx.drawImage(baboon, 0, 0);
 }
 
-function timer(callbackName, callback, imagePixels, image2DArray, height, width) {
+function timer(callbackName, callback, buf, width, height) {
   console.time(`${callbackName} timer`);
-  let callbackReturnValue = callback(imagePixels, image2DArray, height, width);
+  let callbackReturnValue = callback(buf, width, height);
   console.timeEnd(`${callbackName} timer`);
   return callbackReturnValue;
 }
@@ -27,38 +27,42 @@ function getIndex(i, j, width) {
   return (i * width * 4) + (j * 4);
 }
 
-function optimizedMed(arr, i, j, colour_value) {
+function getMedianOfSum(arr, i, j, width, colour_value) {
   let sum = 0;
   let indexes = getKernal(i, j);
   for ([r, c] of indexes) {
-    sum += arr[getIndex(r, c, 256) + colour_value];
+    sum += arr[getIndex(r, c, width) + colour_value];
   }
   return parseInt(sum / 9);
+}
+
+function medianFilter(buf, width, height) {
+  let copy = new Uint8ClampedArray(buf);
+
+  // convert each RGB value to 
+  // 256 is width and height of the image
+  for (i = 2; i < width - 3; i++) {
+    for (j = 2; j < height - 3; j++) {
+      let red = getMedianOfSum(buf, i, j, width, 0);
+      let green = getMedianOfSum(buf, i, j, width, 1);
+      let blue = getMedianOfSum(buf, i, j, width, 2);
+      copy[getIndex(i, j, width) + 0] = red;
+      copy[getIndex(i, j, width) + 1] = green;
+      copy[getIndex(i, j, width) + 2] = blue;
+    }
+  }
+  return new ImageData(copy, width, height);
 }
 
 function doFilter() {
   // assumes baboon256.png is 256x256
   // get the ImageData from the canvas
-  let imageBuffer = ctx.getImageData(0, 0, 256, 256);
+  let imageBuffer = ctx.getImageData(0, 0, baboon.width, baboon.width);
   let buf = imageBuffer.data;
-  let copy = new Uint8ClampedArray(buf);
-
-  // convert each RGB value to 
-  // 256 is width and height of the image
-  for (i = 2; i < 256 - 3; i++) {
-    for (j = 2; j < 256 - 3; j++) {
-      let red = optimizedMed(buf, i, j, 0);
-      let green = optimizedMed(buf, i, j, 1);
-      let blue = optimizedMed(buf, i, j, 2);
-      copy[getIndex(i, j, 256) + 0] = red;
-      copy[getIndex(i, j, 256) + 1] = green;
-      copy[getIndex(i, j, 256) + 2] = blue;
-    }
-  }
-  let newImageData = new ImageData(copy, 256, 256);
 
   // display the converted image
-  ctx.putImageData(newImageData, 0, 0);
+  let newConvertedImageBuffer = timer("vanilla medianFilter: ", medianFilter, buf, baboon.width, baboon.height);
+  ctx.putImageData(newConvertedImageBuffer, 0, 0);
 }
 
 function restoreImage() {
