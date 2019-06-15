@@ -1,68 +1,12 @@
 // Setting Up imageObject Data.
 let imageObject = document.getElementById("filter-image");
-
-// Generates a 2D array of the image pixels to make the calculations easier to manage.
-function generate2DArrayOfImagePixels(imagePixels, height, width) {
-  let image2DArray = [...Array(height)].map(x => Array(width).fill(0));
-  for (i = 0; i < height; i++) {
-    for (j = 0; j < width; j++) {
-      let k = (i * 4 * imagePixels.width) + (j * 4);
-      let r = imagePixels.data[k];
-      let g = imagePixels.data[k + 1];
-      let b = imagePixels.data[k + 2];
-      image2DArray[i][j] = { r: r, g: g, b: b };
-    }
-  }
-  return image2DArray;
+let globalImageCanvas = document.getElementById('pic');
+let ctx = globalImageCanvas.getContext('2d');
+let baboon = new Image();
+baboon.src = 'baboon.png';
+baboon.onload = function () {
+  ctx.drawImage(baboon, 0, 0);
 }
-
-function doVanillaJSMedianFiler(imagePixels, image2DArray, height, width) {
-  for (i = 2; i < height - 3; i++) {
-    for (j = 2; j < width - 3; j++) {
-      let kernalRedCalculation = (image2DArray[i + 1][j - 1].r + image2DArray[i + 1][j].r + image2DArray[i + 1][j + 1].r + image2DArray[i][j - 1].r + image2DArray[i][j].r + image2DArray[i][j + 1].r + image2DArray[i - 1][j - 1].r + image2DArray[i - 1][j].r + image2DArray[i - 1][j + 1].r) / 9;
-      let kernalGreenCalculation = (image2DArray[i + 1][j - 1].g + image2DArray[i + 1][j].g + image2DArray[i + 1][j + 1].g + image2DArray[i][j - 1].g + image2DArray[i][j].g + image2DArray[i][j + 1].g + image2DArray[i - 1][j - 1].g + image2DArray[i - 1][j].g + image2DArray[i - 1][j + 1].g) / 9;
-      let kernalBlueCalculation = (image2DArray[i + 1][j - 1].b + image2DArray[i + 1][j].b + image2DArray[i + 1][j + 1].b + image2DArray[i][j - 1].b + image2DArray[i][j].b + image2DArray[i][j + 1].b + image2DArray[i - 1][j - 1].b + image2DArray[i - 1][j].b + image2DArray[i - 1][j + 1].b) / 9;
-      image2DArray[i][j] = { r: kernalRedCalculation, g: kernalGreenCalculation, b: kernalBlueCalculation };
-    }
-  }
-  for (let i = 0; i < imagePixels.height; i++) {
-    for (let j = 0; j < imagePixels.width; j++) {
-      let x = (i * 4 * imagePixels.width) + (j * 4);
-      imagePixels.data[x] = image2DArray[i][j].r;
-      imagePixels.data[x + 1] = image2DArray[i][j].g;
-      imagePixels.data[x + 2] = image2DArray[i][j].b;
-    }
-  }
-  return imagePixels;
-}
-
-function doMedianFilter(imageObject, implementionType) {
-  let canvas = document.createElement("canvas");
-  let ctx = canvas.getContext("2d");
-  let width = imageObject.width;
-  let height = imageObject.height;
-  canvas.width = width
-  canvas.height = height
-  ctx.drawImage(imageObject, 0, 0);
-
-  let imagePixels = ctx.getImageData(0, 0, width, height);
-  let image2DArray = generate2DArrayOfImagePixels(imagePixels, height, width);
-  if (implementionType === 'vanilla-js') {
-    imagePixels = timer(
-      "doVanillaJSMedianFiler",
-      doVanillaJSMedianFiler,
-      imagePixels, image2DArray, height, width
-    );
-  }
-  else {
-    throw "Invalid implementType!";
-  }
-
-  ctx.putImageData(imagePixels, 0, 0, 0, 0, imagePixels.width, imagePixels.height);
-
-  return canvas.toDataURL();
-}
-
 
 function timer(callbackName, callback, imagePixels, image2DArray, height, width) {
   console.time(`${callbackName} timer`);
@@ -71,10 +15,52 @@ function timer(callbackName, callback, imagePixels, image2DArray, height, width)
   return callbackReturnValue;
 }
 
-function doFilter(implementionType) {
-  imageObject.src = doMedianFilter(imageObject, implementionType);
+function getKernal(i, j) {
+  return [
+    [i - 1, j - 1], [i - 1, j], [i - 1, j + 1],
+    [i, j - 1], [i, j], [i, j + 1],
+    [i + 1, j - 1], [i + 1, j], [i + 1, j + 1],
+  ]
+}
+
+function getIndex(i, j, width) {
+  return (i * width * 4) + (j * 4);
+}
+
+function optimizedMed(arr, i, j, colour_value) {
+  let sum = 0;
+  let indexes = getKernal(i, j);
+  for ([r, c] of indexes) {
+    sum += arr[getIndex(r, c, 256) + colour_value];
+  }
+  return parseInt(sum / 9);
+}
+
+function doFilter() {
+  // assumes baboon256.png is 256x256
+  // get the ImageData from the canvas
+  let imageBuffer = ctx.getImageData(0, 0, 256, 256);
+  let buf = imageBuffer.data;
+  let copy = new Uint8ClampedArray(buf);
+
+  // convert each RGB value to 
+  // 256 is width and height of the image
+  for (i = 2; i < 256 - 3; i++) {
+    for (j = 2; j < 256 - 3; j++) {
+      let red = optimizedMed(buf, i, j, 0);
+      let green = optimizedMed(buf, i, j, 1);
+      let blue = optimizedMed(buf, i, j, 2);
+      copy[getIndex(i, j, 256) + 0] = red;
+      copy[getIndex(i, j, 256) + 1] = green;
+      copy[getIndex(i, j, 256) + 2] = blue;
+    }
+  }
+  let newImageData = new ImageData(copy, 256, 256);
+
+  // display the converted image
+  ctx.putImageData(newImageData, 0, 0);
 }
 
 function restoreImage() {
-  imageObject.src = "./baboon.png";
+  baboon.src = "./baboon.png";
 }
