@@ -15,27 +15,6 @@ function timer(callbackName, callback, buf, width, height) {
   return callbackReturnValue;
 }
 
-function getKernal(i, j) {
-  return [
-    [i - 1, j - 1], [i - 1, j], [i - 1, j + 1],
-    [i, j - 1], [i, j], [i, j + 1],
-    [i + 1, j - 1], [i + 1, j], [i + 1, j + 1],
-  ]
-}
-
-function getIndex(i, j, width) {
-  return (i * width * 4) + (j * 4);
-}
-
-function getMedianOfSum(arr, i, j, width, colour_value) {
-  let sum = 0;
-  let indexes = getKernal(i, j);
-  for ([r, c] of indexes) {
-    sum += arr[getIndex(r, c, width) + colour_value];
-  }
-  return parseInt(sum / 9);
-}
-
 function medianFilter(buf, width, height) {
   let copy = new Uint8ClampedArray(buf);
 
@@ -43,15 +22,47 @@ function medianFilter(buf, width, height) {
   // 256 is width and height of the image
   for (i = 2; i < width - 3; i++) {
     for (j = 2; j < height - 3; j++) {
-      let red = getMedianOfSum(buf, i, j, width, 0);
-      let green = getMedianOfSum(buf, i, j, width, 1);
-      let blue = getMedianOfSum(buf, i, j, width, 2);
-      copy[getIndex(i, j, width) + 0] = red;
-      copy[getIndex(i, j, width) + 1] = green;
-      copy[getIndex(i, j, width) + 2] = blue;
+
+      let redSum = 0;
+      redSum += buf[(((i - 1) * width * 4) + ((j - 1) * 4))]
+      redSum += buf[(((i - 1) * width * 4) + (j * 4) + 0)]
+      redSum += buf[(((i - 1) * width * 4) + ((j + 1) * 4) + 0)]
+      redSum += buf[((i * width * 4) + ((j - 1) * 4) + 0)]
+      redSum += buf[((i * width * 4) + (j * 4) + 0)]
+      redSum += buf[((i * width * 4) + ((j + 1) * 4) + 0)]
+      redSum += buf[(((i + 1) * width * 4) + ((j - 1) * 4) + 0)]
+      redSum += buf[(((i + 1) * width * 4) + (j * 4) + 0)]
+      redSum += buf[(((i + 1) * width * 4) + ((j + 1) * 4) + 0)]
+
+      let greenSum = 0;
+      greenSum += buf[(((i - 1) * width * 4) + ((j - 1) * 4)) + 1]
+      greenSum += buf[(((i - 1) * width * 4) + (j * 4) + 0) + 1]
+      greenSum += buf[(((i - 1) * width * 4) + ((j + 1) * 4) + 0) + 1]
+      greenSum += buf[((i * width * 4) + ((j - 1) * 4) + 0) + 1]
+      greenSum += buf[((i * width * 4) + (j * 4) + 0) + 1]
+      greenSum += buf[((i * width * 4) + ((j + 1) * 4) + 0) + 1]
+      greenSum += buf[(((i + 1) * width * 4) + ((j - 1) * 4) + 0) + 1]
+      greenSum += buf[(((i + 1) * width * 4) + (j * 4) + 0) + 1]
+      greenSum += buf[(((i + 1) * width * 4) + ((j + 1) * 4) + 0) + 1]
+
+      let blueSum = 0;
+      blueSum += buf[(((i - 1) * width * 4) + ((j - 1) * 4)) + 2]
+      blueSum += buf[(((i - 1) * width * 4) + (j * 4) + 0) + 2]
+      blueSum += buf[(((i - 1) * width * 4) + ((j + 1) * 4) + 0) + 2]
+      blueSum += buf[((i * width * 4) + ((j - 1) * 4) + 0) + 2]
+      blueSum += buf[((i * width * 4) + (j * 4) + 0) + 2]
+      blueSum += buf[((i * width * 4) + ((j + 1) * 4) + 0) + 2]
+      blueSum += buf[(((i + 1) * width * 4) + ((j - 1) * 4) + 0) + 2]
+      blueSum += buf[(((i + 1) * width * 4) + (j * 4) + 0) + 2]
+      blueSum += buf[(((i + 1) * width * 4) + ((j + 1) * 4) + 0) + 2]
+
+      // Copying over the imageData.
+      copy[((i * width * 4) + (j * 4)) + 0] = Math.floor(redSum / 9);
+      copy[((i * width * 4) + (j * 4)) + 1] = Math.floor(greenSum / 9);
+      copy[((i * width * 4) + (j * 4)) + 2] = Math.floor(blueSum / 9);
     }
   }
-  return new ImageData(copy, width, height);
+  return copy;
 }
 
 function doFilter() {
@@ -62,7 +73,8 @@ function doFilter() {
 
   // display the converted image
   let newConvertedImageBuffer = timer("vanilla medianFilter: ", medianFilter, buf, baboon.width, baboon.height);
-  ctx.putImageData(newConvertedImageBuffer, 0, 0);
+  let newImageData = new ImageData(newConvertedImageBuffer, baboon.width, baboon.width);
+  ctx.putImageData(newImageData, 0, 0);
 }
 
 function restoreImage() {
