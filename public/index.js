@@ -72,11 +72,35 @@ function doFilter() {
   let buf = imageBuffer.data;
 
   // display the converted image
-  let newConvertedImageBuffer = timer("vanilla medianFilter: ", medianFilter, buf, baboon.width, baboon.height);
-  let newImageData = new ImageData(newConvertedImageBuffer, baboon.width, baboon.width);
-  ctx.putImageData(newImageData, 0, 0);
+  let newConvertedImageBuffer = timer("vanilla medianFilter: ", typescriptMedianFilter, buf, baboon.width, baboon.height);
+  // let newImageData = new ImageData(newConvertedImageBuffer, baboon.width, baboon.width);
+  // ctx.putImageData(newImageData, 0, 0);
+  alert('it ran!');
 }
 
 function restoreImage() {
   baboon.src = "./baboon.png";
 }
+
+const assemblyScriptConfig = {
+  env: {
+    __memory_base: 0,
+    __table_base: 0,
+    memory: new WebAssembly.Memory({
+      initial: 256,
+    }),
+    table: new WebAssembly.Table({
+      initial: 0,
+      element: 'anyfunc',
+    }),
+    abort: function () { alert('hey'); },
+  }
+}
+
+fetch("../build/untouched.wasm")
+  .then(response => response.arrayBuffer())
+  .then(buffer => WebAssembly.instantiate(buffer, assemblyScriptConfig))
+  .then(module => {
+    window.wasmTypescriptExports = module.instance.exports;
+    window.typescriptMedianFilter = module.instance.exports.medianTypescriptFilter;
+  });
